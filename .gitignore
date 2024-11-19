@@ -1,0 +1,10 @@
+*.exe
+*.ilk
+*.pdb
+*.vs
+~$*.docx
+Debug/
+Release/
+Floorplan/
+Thumbs.db
+glew-2.1.0
