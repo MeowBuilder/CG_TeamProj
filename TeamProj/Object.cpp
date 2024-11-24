@@ -14,7 +14,7 @@ bool Object::Load_Object(const char* path) {
 
 	ifstream in(path);
 	if (!in) {
-		cerr << path << "파일 못찾음";
+		cerr << path << "  찾";
 		exit(1);
 	}
 
@@ -70,7 +70,7 @@ bool Object::Set_Obj(GLuint shaderProgramID, const char* path) {
 
 	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
 	if (positionAttribute == -1) {
-		cerr << "position 속성 설정 실패" << endl;
+		cerr << "position 憺  ";
 		return false;
 	}
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -83,15 +83,8 @@ bool Object::Set_Obj(GLuint shaderProgramID, const char* path) {
 
 void Object::Draw(GLuint shaderProgramID) {
 	glBindVertexArray(VAO);
-	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
-	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
-
-	glm::mat4 TR = glm::mat4(1.0f);
-
-	glUniform3f(colorLocation, 1, 1, 1);
-	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
-
-	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, 0);
+	glBindVertexArray(0);
 }
 
 void Object::Update() {
