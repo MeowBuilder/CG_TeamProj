@@ -52,3 +52,48 @@ bool Object::Load_Object(const char* path) {
 
 	return true;
 }
+
+bool Object::Set_Obj(GLuint shaderProgramID, const char* path) {
+	Load_Object(path);
+
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+
+	glGenBuffers(1, &VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &EBO);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
+
+	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
+	if (positionAttribute == -1) {
+		cerr << "position 속성 설정 실패" << endl;
+		return false;
+	}
+	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(positionAttribute);
+
+	glBindVertexArray(0);
+
+	return true;
+}
+
+void Object::Draw(GLuint shaderProgramID) {
+	glBindVertexArray(VAO);
+	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
+	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
+
+	glm::mat4 TR = glm::mat4(1.0f);
+
+	glUniform3f(colorLocation, 1, 1, 1);
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(TR));
+
+	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, (void*)0);
+}
+
+void Object::Update() {
+
+}

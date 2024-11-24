@@ -16,7 +16,15 @@ class Object
 	std::vector< glm::vec3 > vertices;
 	std::vector< glm::vec2 > uvs;
 	std::vector< glm::vec3 > normals;
-public:
+
 	bool Load_Object(const char* path);
+
+public:
+	GLuint VAO, VBO, EBO;
+	
+	bool Set_Obj(GLuint shaderProgramID, const char* path);
+	void Draw(GLuint shaderProgramID);
+	void Update();
+
 };
 
