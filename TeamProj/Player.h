@@ -38,11 +38,8 @@ public:
     glm::vec3 GetVelocity() const { return velocity; }
     void SetVelocity(const glm::vec3& vel) { velocity = vel; }
     
-    glm::vec3 GetCameraFront() const { return camera.GetFront(); }
-    glm::vec3 GetCameraUp() const { return camera.GetUp(); }
-    
-    void Jump();
-
     Camera& GetCamera() { return camera; }
+    
+    void Jump();  // 점프 함수 추가
 };
 
