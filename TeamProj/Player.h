@@ -41,6 +41,8 @@ public:
     glm::vec3 GetCameraFront() const { return camera.GetFront(); }
     glm::vec3 GetCameraUp() const { return camera.GetUp(); }
     
+    void Jump();
+
     Camera& GetCamera() { return camera; }
 };
 

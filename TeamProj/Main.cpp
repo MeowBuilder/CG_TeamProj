@@ -136,6 +136,9 @@ GLvoid Keyboard(unsigned char key, int x, int y)
 	case 'q': case 'Q':
 		glutLeaveMainLoop();
 		break;
+	case ' ':
+		player.Jump();
+		break;
 	}
 	glutPostRedisplay();
 }
@@ -145,6 +148,14 @@ GLvoid KeyboardUp(unsigned char key, int x, int y)
 {
 	keys[key] = false;
 	glutPostRedisplay();
+}
+
+void Special(int key, int x, int y) {
+	switch (key)
+	{
+	default:
+		break;
+	}
 }
 
 void Mouse(int button, int state, int x, int y)
@@ -200,6 +211,7 @@ int main(int argc, char** argv)
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
+	glutSpecialFunc(Special);
 	glutKeyboardFunc(Keyboard);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutMouseFunc(Mouse);
