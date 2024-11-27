@@ -15,6 +15,11 @@ Player::~Player()
 
 void Player::Update(float deltaTime)
 {
+    if (position.y > 0.0f)
+    {
+        velocity += glm::vec3(0, -9.8, 0) * deltaTime;
+    }
+
     position += velocity * deltaTime;
     
     velocity *= 0.8f;
@@ -49,7 +54,7 @@ void Player::Move(const glm::vec3& direction, float deltaTime)
 }
 
 void Player::Jump() {
-    velocity.y = 1.0f;
+    velocity.y += 10.0f;
 }
 
 void Player::Render()
