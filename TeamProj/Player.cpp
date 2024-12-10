@@ -1,48 +1,128 @@
 #include "Player.h"
-
-Player::Player(glm::vec3 startPos) : 
-    position(startPos),
-    rotation(0.0f),
-    velocity(0.0f),
-    size(1.0f),
-    camera(startPos)
-{
-}
+#include <GL/glew.h>
+#include <GL/freeglut.h>
+#include <GL/freeglut_ext.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <iostream>
 
 Player::~Player()
 {
+    if (isInitialized) {
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+    }
 }
 
 void Player::Update(float deltaTime)
 {
-    // 중력 적용
-    const float GRAVITY = -9.8f;
-    velocity.y += GRAVITY * deltaTime;
-    
-    // 임시 위치 계산
-    glm::vec3 newPosition = position + velocity * deltaTime;
-    
-    // 바닥 충돌 검사
-    if (newPosition.y < 0.0f) {
-        newPosition.y = 0.0f;  // 바닥 위치로 보정
-        velocity.y = 0.0f;     // 수직 속도를 0으로
+    velocity.y += -15.0f * deltaTime;
+
+    if (velocity.y < -20.0f) {
+        velocity.y = -20.0f;
     }
-    
-    // 위치 업데이트
-    position = newPosition;
-    
-    // 수평 방향 감속 (더 강한 감속 적용)
-    glm::vec2 horizontalVel(velocity.x, velocity.z);
-    if (glm::length(horizontalVel) > 0.1f) {
-        velocity.x *= 0.85f;  // 0.95f에서 0.85f로 변경
-        velocity.z *= 0.85f;  // 더 빠른 감속
-    } else {
-        velocity.x = 0.0f;
-        velocity.z = 0.0f;
-    }
-    
-    // 카메라 위치 업데이트
+
+    position += velocity * deltaTime;
     camera.SetPosition(position);
+}
+
+void Player::Jump() {
+    if (isGrounded) {
+        velocity.y = 4.0f;
+        isGrounded = false;
+    }
+}
+
+bool Player::InitializeBuffers()
+{
+    if (isInitialized) return true;
+
+    try {
+        float vertices[] = {
+            -0.5f, -1.0f, -0.5f,
+             0.5f, -1.0f, -0.5f,
+             0.5f,  1.0f, -0.5f,
+            -0.5f,  1.0f, -0.5f,
+            -0.5f, -1.0f,  0.5f,
+             0.5f, -1.0f,  0.5f,
+             0.5f,  1.0f,  0.5f,
+            -0.5f,  1.0f,  0.5f,
+        };
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+
+        isInitialized = true;
+        return true;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error initializing player buffers: " << e.what() << std::endl;
+        return false;
+    }
+}
+
+void Player::Render(GLuint shaderProgramID)
+{
+    if (!isInitialized) {
+        if (!InitializeBuffers()) {
+            std::cerr << "Failed to initialize player buffers" << std::endl;
+            return;
+        }
+    }
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::translate(model, position);
+    model = glm::scale(model, colliderSize);
+
+    unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
+    glUniformMatrix4fv(modelLocation, 1, GL_FALSE, &model[0][0]);
+
+    unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
+    glUniform3f(colorLocation, 0.0f, 1.0f, 0.0f);
+
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
+    glDrawArrays(GL_LINE_LOOP, 4, 4);
+    glBegin(GL_LINES);
+    glVertex3f(-0.5f, -1.0f, -0.5f);
+    glVertex3f(-0.5f, -1.0f,  0.5f);
+    
+    glVertex3f( 0.5f, -1.0f, -0.5f);
+    glVertex3f( 0.5f, -1.0f,  0.5f);
+    
+    glVertex3f( 0.5f,  1.0f, -0.5f);
+    glVertex3f( 0.5f,  1.0f,  0.5f);
+    
+    glVertex3f(-0.5f,  1.0f, -0.5f);
+    glVertex3f(-0.5f,  1.0f,  0.5f);
+    glEnd();
+    glBindVertexArray(0);
+}
+
+bool Player::CheckCollision(const glm::vec3& objPos, const glm::vec3& objSize) const
+{
+    glm::vec3 colliderPos = position;
+    colliderPos.y += colliderSize.y/2;
+
+    bool collisionX = colliderPos.x + colliderSize.x/2 >= objPos.x - objSize.x/2 &&
+                     objPos.x + objSize.x/2 >= colliderPos.x - colliderSize.x/2;
+    bool collisionY = colliderPos.y + colliderSize.y/2 >= objPos.y - objSize.y/2 &&
+                     objPos.y + objSize.y/2 >= colliderPos.y - colliderSize.y/2;
+    bool collisionZ = colliderPos.z + colliderSize.z/2 >= objPos.z - objSize.z/2 &&
+                     objPos.z + objSize.z/2 >= colliderPos.z - colliderSize.z/2;
+
+    return collisionX && collisionY && collisionZ;
 }
 
 void Player::SetMouseLook(float xoffset, float yoffset)
@@ -52,33 +132,14 @@ void Player::SetMouseLook(float xoffset, float yoffset)
 
 void Player::Move(const glm::vec3& direction, float deltaTime)
 {
-    float speed = 50.0f;  // 60.0f에서 20.0f로 감소
+    const float SPEED = 5.0f;
     
-    glm::vec3 forward = glm::normalize(glm::vec3(camera.GetFront().x, 0.0f, camera.GetFront().z));
-    glm::vec3 right = glm::normalize(glm::cross(forward, camera.GetUp()));
+    velocity.x = 0.0f;
+    velocity.z = 0.0f;
     
-    glm::vec3 newVelocity = direction * speed;
-    
-    float maxSpeed = 20.0f;  // 35.0f에서 10.0f로 감소
-    velocity += newVelocity * deltaTime;
-    
-    // 수평 속도만 제한
-    glm::vec2 horizontalVel(velocity.x, velocity.z);
-    if (glm::length(horizontalVel) > maxSpeed) {
-        horizontalVel = glm::normalize(horizontalVel) * maxSpeed;
-        velocity.x = horizontalVel.x;
-        velocity.z = horizontalVel.y;
+    if (glm::length(direction) > 0.0f) {
+        glm::vec3 normalizedDir = glm::normalize(direction);
+        velocity.x = normalizedDir.x * SPEED;
+        velocity.z = normalizedDir.z * SPEED;
     }
-}
-
-void Player::Jump() {
-    // 바닥에 있을 때만 점프 가능
-    if (position.y <= 0.01f) {  // 약간의 여유를 둠
-        velocity.y = 5.0f;  // 점프 힘
-    }
-}
-
-void Player::Render()
-{
-    // 이제 카메라 변환은 Main.cpp에서 처리
 }

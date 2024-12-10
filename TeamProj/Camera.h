@@ -12,7 +12,6 @@ private:
     float pitch;
     
     float sensitivity;
-
 public:
     Camera(glm::vec3 startPos = glm::vec3(0.0f, 0.0f, 0.0f));
     
@@ -20,7 +19,6 @@ public:
     void SetMouseLook(float xoffset, float yoffset);
     glm::mat4 GetViewMatrix() const;
     
-    // Getters/Setters
     glm::vec3 GetPosition() const { return position; }
     void SetPosition(const glm::vec3& pos) { position = pos; }
     
