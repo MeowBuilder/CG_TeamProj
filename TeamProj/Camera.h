@@ -23,5 +23,13 @@ public:
     void SetPosition(const glm::vec3& pos) { position = pos; }
     
     glm::vec3 GetFront() const { return front; }
+    void SetFront(const glm::vec3& newFront) { 
+        front = glm::normalize(newFront);
+        // 새로운 front 벡터로부터 yaw와 pitch 계산
+        pitch = glm::degrees(asin(front.y));
+        yaw = glm::degrees(atan2(front.z, front.x));
+    }
+    
     glm::vec3 GetUp() const { return up; }
+    void SetUp(const glm::vec3& newUp) { up = glm::normalize(newUp); }
 }; 

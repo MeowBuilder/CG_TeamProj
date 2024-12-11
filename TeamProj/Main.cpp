@@ -12,6 +12,7 @@
 #include "Shader.h"
 #include "Object.h"
 #include "Player.h"
+#include "Portal.h"
 
 using namespace std;
 
@@ -33,19 +34,43 @@ float lastY = WIN_H / 2.0f;
 
 bool keys[256] = { false };
 
+Portal portal1(glm::vec3(-3.0f, 1.6f, 0.0f));
+Portal portal2(glm::vec3(3.0f, 1.6f, 0.0f));
+
+void RenderScene(GLuint shaderProgramID, bool skipPortals = false)
+{
+	for(int i = 0; i < NUM_CUBES; i++) {
+		cubes[i].Draw(shaderProgramID);
+	}
+	player.Render(shaderProgramID);
+	
+	if (!skipPortals) {
+		portal1.Render(shaderProgramID);
+		portal2.Render(shaderProgramID);
+	}
+}
+
 GLvoid drawScene()
 {
-	glClearColor(0,0,0, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
 	glUseProgram(shader1.shaderProgramID);
 
-	glm::mat4 projection = glm::mat4(1.0f);
+	portal1.RenderView(shader1.shaderProgramID, player.GetCamera());
+	RenderScene(shader1.shaderProgramID, true);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	portal2.RenderView(shader1.shaderProgramID, player.GetCamera());
+	RenderScene(shader1.shaderProgramID, true);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glViewport(0, 0, WIN_W, WIN_H);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
 	float aspectRatio = (float)WIN_W / (float)WIN_H;
-	projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
 	unsigned int projectionLocation = glGetUniformLocation(shader1.shaderProgramID, "projectionTransform");
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 
@@ -53,11 +78,7 @@ GLvoid drawScene()
 	unsigned int viewLocation = glGetUniformLocation(shader1.shaderProgramID, "viewTransform");
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
-	for(int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Draw(shader1.shaderProgramID);
-	}
-
-	player.Render(shader1.shaderProgramID);
+	RenderScene(shader1.shaderProgramID, false);
 
 	glutSwapBuffers();
 }
@@ -100,6 +121,25 @@ GLvoid TimerFunction(int value)
 
 	player.Move(moveDir, deltaTime);
 	player.Update(deltaTime);
+
+	static bool canTeleport = true;
+	
+	if (canTeleport) {
+		if (portal1.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
+			portal1.Teleport(player);
+			canTeleport = false;
+		}
+		else if (portal2.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
+			portal2.Teleport(player);
+			canTeleport = false;
+		}
+	}
+	else {
+		if (!portal1.CheckCollision(player.GetPosition(), player.GetColliderSize()) &&
+			!portal2.CheckCollision(player.GetPosition(), player.GetColliderSize())) {
+			canTeleport = true;
+		}
+	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Update(deltaTime);
@@ -266,7 +306,7 @@ int main(int argc, char** argv)
 
 	glm::vec3 cubePositions[] = {
 		glm::vec3(0.0f, -0.5f, 0.0f),
-		glm::vec3(3.0f, 0.5f, 3.0f),
+		glm::vec3(0.0f, 0.5f, 0.0f),
 		glm::vec3(-3.0f, 0.5f, 3.0f),
 		glm::vec3(3.0f, 0.5f, -3.0f),
 		glm::vec3(-3.0f, 0.5f, -3.0f)
@@ -288,16 +328,31 @@ int main(int argc, char** argv)
 		if (i == 0) {
 			cubes[i].SetFloor(true);
 		}
-		else if (i % 2 == 1) {
+		else if (i == 1) {
+			cubes[i].SetMovable(false);
+		}
+		else {
 			cubes[i].SetMovable(true);
 			cubes[i].SetMass(1.0f);
 		}
 	}
 
-	player.SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+	player.SetPosition(glm::vec3(0.0f, 0.0f, 5.0f));
 	
 	if (!player.InitializeBuffers()) {
 		cerr << "Error: Player Buffer Initialization Failed" << endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	portal1.SetRotation(glm::vec3(0.0f, 90.0f, 0.0f));
+	portal2.SetRotation(glm::vec3(0.0f, 45.0f, 0.0f));
+	portal1.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
+	portal2.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
+	portal1.LinkPortal(&portal2);
+	portal2.LinkPortal(&portal1);
+
+	if (!portal1.InitializeBuffers() || !portal2.InitializeBuffers()) {
+		cerr << "Error: Portal Buffer Initialization Failed" << endl;
 		std::exit(EXIT_FAILURE);
 	}
 
