@@ -19,7 +19,7 @@ public:
     void SetMouseLook(float xoffset, float yoffset);
     glm::mat4 GetViewMatrix() const;
     
-    glm::vec3 getPosition() const { return position; }
+    glm::vec3 GetPosition() const { return position; }
     void SetPosition(const glm::vec3& pos) { position = pos; }
     
     glm::vec3 GetFront() const { return front; }
