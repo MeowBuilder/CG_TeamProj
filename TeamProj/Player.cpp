@@ -17,7 +17,9 @@ Player::~Player()
 
 void Player::Update(float deltaTime)
 {
-    velocity.y += -15.0f * deltaTime;
+    previousPosition = position;
+    
+    velocity.y -= 9.8f * deltaTime;
 
     if (velocity.y < -20.0f) {
         velocity.y = -20.0f;
