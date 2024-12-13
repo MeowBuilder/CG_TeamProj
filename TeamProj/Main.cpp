@@ -345,7 +345,7 @@ int main(int argc, char** argv)
 	}
 
 	portal1.SetRotation(glm::vec3(0.0f, 90.0f, 0.0f));
-	portal2.SetRotation(glm::vec3(0.0f, -90.0f, 0.0f));
+	portal2.SetRotation(glm::vec3(0.0f, 90.0f, 0.0f));
 	portal1.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
 	portal2.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
 	portal1.LinkPortal(&portal2);
