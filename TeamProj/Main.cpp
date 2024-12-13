@@ -146,7 +146,7 @@ GLvoid TimerFunction(int value)
 	}
 
 	glm::vec3 pos = player.GetPosition();
-	const float FLOOR_SIZE = 10.0f;
+	const float FLOOR_SIZE = 2.0f;
 	bool isOnFloor = (pos.x >= -FLOOR_SIZE && pos.x <= FLOOR_SIZE &&
 					 pos.z >= -FLOOR_SIZE && pos.z <= FLOOR_SIZE);
 
@@ -162,10 +162,8 @@ GLvoid TimerFunction(int value)
 	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
-		if (cubes[i].IsFloor()) continue;
 
 		for(int j = i + 1; j < NUM_CUBES; j++) {
-			if (cubes[j].IsFloor()) continue;
 
 			glm::vec3 normal;
 			float penetration;
@@ -186,8 +184,6 @@ GLvoid TimerFunction(int value)
 	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
-		if (cubes[i].IsFloor()) continue;
-
 		glm::vec3 normal;
 		float penetration;
 		
@@ -253,14 +249,6 @@ GLvoid KeyboardUp(unsigned char key, int x, int y)
 	glutPostRedisplay();
 }
 
-void Special(int key, int x, int y) {
-	switch (key)
-	{
-	default:
-		break;
-	}
-}
-
 void Mouse(int button, int state, int x, int y)
 {
 	if (state == GLUT_DOWN)
@@ -305,30 +293,24 @@ int main(int argc, char** argv)
 	}
 
 	glm::vec3 cubePositions[] = {
-		glm::vec3(0.0f, -0.5f, 0.0f),
-		glm::vec3(0.0f, 0.5f, 0.0f),
-		glm::vec3(-3.0f, 0.5f, 3.0f),
-		glm::vec3(3.0f, 0.5f, -3.0f),
-		glm::vec3(-3.0f, 0.5f, -3.0f)
+	glm::vec3(0.0f, -0.5f, 0.0f),  // 첫 번째 발판
+	glm::vec3(50.0f, -0.5f, 0.0f)  // 두 번째 발판 (멀리 떨어진 위치)
 	};
 
 	glm::vec3 cubeSizes[] = {
-		glm::vec3(20.0f, 1.0f, 20.0f),
-		glm::vec3(1.0f, 1.0f, 1.0f),
-		glm::vec3(1.0f, 1.0f, 1.0f),
-		glm::vec3(1.0f, 1.0f, 1.0f),
-		glm::vec3(1.0f, 1.0f, 1.0f)
+		glm::vec3(10.0f, 1.0f, 10.0f),   // 첫 번째 발판 크기
+		glm::vec3(10.0f, 1.0f, 10.0f)    // 두 번째 발판 크기
 	};
+
+	
 
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Set_Obj(shader1.shaderProgramID, "cube.obj");
 		cubes[i].SetPosition(cubePositions[i]);
 		cubes[i].SetSize(cubeSizes[i]);
+		cubes[i].SetRGB(glm::vec3(1.0f));
 		
-		if (i == 0) {
-			cubes[i].SetFloor(true);
-		}
-		else if (i == 1) {
+		if (i <= 1) {
 			cubes[i].SetMovable(false);
 		}
 		else {
@@ -337,15 +319,20 @@ int main(int argc, char** argv)
 		}
 	}
 
-	player.SetPosition(glm::vec3(0.0f, 0.0f, 5.0f));
+	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));  // 첫 번째 발판 위 시작
 	
 	if (!player.InitializeBuffers()) {
 		cerr << "Error: Player Buffer Initialization Failed" << endl;
 		std::exit(EXIT_FAILURE);
 	}
 
-	portal1.SetRotation(glm::vec3(0.0f, 90.0f, 0.0f));
-	portal2.SetRotation(glm::vec3(0.0f, 90.0f, 0.0f));
+	// 포탈 위치
+	portal1.SetPosition(glm::vec3(0.0f, 1.0f, -2.0f));  // 첫 번째 발판 위 포탈
+	portal2.SetPosition(glm::vec3(50.0f, 1.0f, 2.0f)); // 두 번째 발판 위 포탈
+
+	// 포탈 크기 및 방향 설정
+	portal1.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
+	portal2.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
 	portal1.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
 	portal2.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
 	portal1.LinkPortal(&portal2);
@@ -358,7 +345,6 @@ int main(int argc, char** argv)
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
-	glutSpecialFunc(Special);
 	glutKeyboardFunc(Keyboard);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutMouseFunc(Mouse);

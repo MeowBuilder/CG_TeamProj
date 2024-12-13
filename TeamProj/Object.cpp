@@ -90,15 +90,8 @@ void Object::Draw(GLuint shaderProgramID) {
 	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, &model[0][0]);
 
 	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
-	if (isFloor) {
-		glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f);
-	}
-	else if (isMovable) {
-		glUniform3f(colorLocation, 0.0f, 0.0f, 1.0f);
-	}
-	else {
-		glUniform3f(colorLocation, 1.0f, 0.0f, 0.0f);
-	}
+	
+	glUniform3f(colorLocation, RGB.x, RGB.y, RGB.z);
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, 0);
@@ -107,7 +100,7 @@ void Object::Draw(GLuint shaderProgramID) {
 
 void Object::Update(float deltaTime)
 {
-	if (!isMovable || isFloor) return;
+	if (!isMovable) return;
 
 	glm::vec3 prevPosition = position;
 
@@ -178,27 +171,18 @@ bool Object::CheckCollisionWithBox(const glm::vec3& otherPos, const glm::vec3& o
 
 void Object::HandleCollision(Object* other, const glm::vec3& normal, float penetration)
 {
-	if (!isMovable || isFloor) return;
+	if (!isMovable) return;
 
 	if (other && !other->IsMovable()) {
-		if (other->IsFloor()) {
-			if (normal.y > 0.7f) {
-				position.y = size.y/2;
-				velocity.y = 0.0f;
-				isGrounded = true;
-			}
-		}
-		else {
-			position += normal * (penetration + 0.01f);
+		position += normal * (penetration + 0.01f);
 
-			float velDotNormal = glm::dot(velocity, normal);
-			if (velDotNormal < 0) {
-				velocity = velocity - (normal * velDotNormal * 1.5f);
+		float velDotNormal = glm::dot(velocity, normal);
+		if (velDotNormal < 0) {
+			velocity = velocity - (normal * velDotNormal * 1.5f);
 				
-				if (abs(normal.y) < 0.7f) {
-					velocity.x *= 0.1f;
-					velocity.z *= 0.1f;
-				}
+			if (abs(normal.y) < 0.7f) {
+				velocity.x *= 0.1f;
+				velocity.z *= 0.1f;
 			}
 		}
 	}

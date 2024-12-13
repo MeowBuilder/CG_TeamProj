@@ -153,9 +153,10 @@ void Portal::Render(GLuint shaderProgramID)
     glUniformMatrix4fv(modelLocation, 1, GL_FALSE, &model[0][0]);
 
     glBindVertexArray(VAO);
-    
+
+    // 뒷면 렌더링
     if (linkedPortal) {
-        glDisable(GL_CULL_FACE);
+        glDisable(GL_CULL_FACE); // 깊이 테스트 비활성화
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -168,29 +169,19 @@ void Portal::Render(GLuint shaderProgramID)
         GLint portalTextureLocation = glGetUniformLocation(shaderProgramID, "portalTexture");
         glUniform1i(portalTextureLocation, 0);
 
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4); // 뒷면 렌더링
 
-        glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
-
-        glLineWidth(3.0f);
-        useTextureLocation = glGetUniformLocation(shaderProgramID, "useTexture");
-        glUniform1i(useTextureLocation, 0);
-        unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
-        glUniform3f(colorLocation, 0.0f, 0.8f, 1.0f);
-        glDrawArrays(GL_LINE_LOOP, 0, 4);
-        glLineWidth(1.0f);
-
-        glEnable(GL_CULL_FACE);
+        glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
+        glEnable(GL_CULL_FACE); // 다시 활성화
     }
-    else {
-        GLint useTextureLocation = glGetUniformLocation(shaderProgramID, "useTexture");
-        glUniform1i(useTextureLocation, 0);
 
-        unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
-        glUniform3f(colorLocation, 1.0f, 0.5f, 0.0f);
-        glDrawArrays(GL_LINE_LOOP, 0, 4);
-    }
+    // 앞면 렌더링
+    GLint useTextureLocation = glGetUniformLocation(shaderProgramID, "useTexture");
+    glUniform1i(useTextureLocation, 0);
+
+    unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
+    glUniform3f(colorLocation, 1.0f, 0.5f, 0.0f);
+    glDrawArrays(GL_LINE_LOOP, 0, 4); // 앞면 렌더링
 
     glBindVertexArray(0);
 }
@@ -286,7 +277,7 @@ void Portal::Teleport(Player& player) const
     // 새로운 위치 계산
     glm::vec3 newPosition = glm::vec3(linkedPortalTransform * glm::inverse(portalTransform) * glm::vec4(player.GetPosition(), 1.0f));
 
-    // 현��� 포털의 방향 벡터
+    // 현재 포털의 방향 벡터
     glm::vec3 portalForward = glm::vec3(
         -sin(glm::radians(rotation.y)),
         0.0f,

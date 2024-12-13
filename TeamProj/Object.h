@@ -18,8 +18,8 @@ class Object
 	glm::vec3 position;
 	glm::vec3 size;
 	glm::vec3 velocity;
+	glm::vec3 RGB;
 	bool isMovable;
-	bool isFloor;
 	bool isGrounded;
 	float mass;
 	float friction;
@@ -32,7 +32,6 @@ public:
 		size(1.0f), 
 		velocity(0.0f),
 		isMovable(false),
-		isFloor(false),
 		isGrounded(false),
 		mass(1.0f),
 		friction(0.5f) {}
@@ -56,8 +55,7 @@ public:
 	bool IsMovable() const { return isMovable; }
 	void SetMovable(bool movable) { isMovable = movable; }
 
-	bool IsFloor() const { return isFloor; }
-	void SetFloor(bool floor) { isFloor = floor; }
+	void SetRGB(glm::vec3 nRGB) { RGB = nRGB; }
 
 	bool IsGrounded() const { return isGrounded; }
 	void SetGrounded(bool grounded) { isGrounded = grounded; }
