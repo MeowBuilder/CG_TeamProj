@@ -24,10 +24,8 @@ public:
     
     glm::vec3 GetFront() const { return front; }
     void SetFront(const glm::vec3& newFront) { 
-        front = glm::normalize(newFront);
-        // 새로운 front 벡터로부터 yaw와 pitch 계산
-        pitch = glm::degrees(asin(front.y));
-        yaw = glm::degrees(atan2(front.z, front.x));
+        front = newFront;
+
     }
     
     glm::vec3 GetUp() const { return up; }

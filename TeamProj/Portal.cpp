@@ -264,6 +264,8 @@ bool Portal::ShouldTeleport(const glm::vec3& prevPos, const glm::vec3& currentPo
     return false;
 }
 
+#include <iostream>
+
 void Portal::Teleport(Player& player) const
 {
     if (!linkedPortal) return;
@@ -281,59 +283,43 @@ void Portal::Teleport(Player& player) const
     // 포털 A에서 B로의 변환 행렬
     glm::mat4 portalToPortalTransform = linkedPortalTransform * glm::inverse(portalTransform);
 
-    // 플재 포털의 방향 벡터들
+    // 플레이어의 현재 방향 벡터
+    glm::vec3 playerFront = player.GetCamera().GetFront();
+
+    // 새로운 위치 계산
+    glm::vec3 newPosition = glm::vec3(portalToPortalTransform * glm::vec4(player.GetPosition(), 1.0f));
+
+    // 포털의 방향 벡터
     glm::vec3 portalForward = glm::vec3(
         sin(glm::radians(rotation.y)),
         0.0f,
         -cos(glm::radians(rotation.y))
     );
-    glm::vec3 portalRight = glm::vec3(
-        cos(glm::radians(rotation.y)),
-        0.0f,
-        sin(glm::radians(rotation.y))
-    );
 
-    // 연결된 포털의 방향 벡터들
+    // 연결된 포털의 방향 벡터
     glm::vec3 linkedPortalForward = glm::vec3(
         sin(glm::radians(linkedPortal->rotation.y)),
         0.0f,
         -cos(glm::radians(linkedPortal->rotation.y))
     );
-    glm::vec3 linkedPortalRight = glm::vec3(
-        cos(glm::radians(linkedPortal->rotation.y)),
-        0.0f,
-        sin(glm::radians(linkedPortal->rotation.y))
-    );
 
-    // 플레이어의 현재 방향 벡터
-    glm::vec3 playerFront = player.GetCamera().GetFront();
+    // 포털 간의 상대적인 각도 계산
+    float portalsAngle = atan2(glm::dot(glm::cross(portalForward, linkedPortalForward), glm::vec3(0.0f, 1.0f, 0.0f)), 
+                                glm::dot(portalForward, linkedPortalForward));
 
-    // 포털 간의 회전 차이
-    float rotationDiff = linkedPortal->rotation.y - rotation.y;
+    // 포털의 방향과 플레이어의 방향 간의 각도 계산
+    float angle = atan2(glm::dot(glm::cross(portalForward, playerFront), glm::vec3(0.0f, 1.0f, 0.0f)), 
+                        glm::dot(portalForward, playerFront));
 
-    // 시선 방향을 180도 회전
-    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(rotationDiff + 180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-    glm::vec3 newFront = glm::vec3(rotationMatrix * glm::vec4(playerFront, 0.0f));
-
-    // 새로운 위치 계산
-    glm::vec3 newPosition = glm::vec3(portalToPortalTransform * glm::vec4(player.GetPosition(), 1.0f));
-
-    // 플레이어의 속도를 포털 기준으로 변환
-    glm::vec3 velocity = player.GetVelocity();
-    
-    // 현재 포털 기준으로 속도의 상대적 방향 계산
-    float velForwardDot = glm::dot(velocity, portalForward);
-    float velRightDot = glm::dot(velocity, portalRight);
-    
-    // ��결된 포털 기준으로 속도 재구성
-    glm::vec3 newVelocity = linkedPortalForward * velForwardDot - linkedPortalRight * velRightDot;
-    newVelocity.y = velocity.y;  // 수직 속도는 그대로 유지
+    // 새로운 방향 계산 (포털의 방향을 기준으로 회전)
+    glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), portalsAngle + angle, glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::vec3 newFront = glm::vec3(rotationMatrix * glm::vec4(playerFront, 1.0f));
 
     // 변환된 값들 적용
     player.SetPosition(newPosition);
-    player.GetCamera().SetFront(glm::normalize(newFront));
+    player.GetCamera().SetFront(newFront); // 포털의 방향에 따라 설정
     player.GetCamera().SetUp(glm::vec3(0.0f, 1.0f, 0.0f));  // Up 벡터는 항상 수직 유지
-    player.SetVelocity(newVelocity);
+    player.SetVelocity(player.GetVelocity()); // 속도는 그대로 유지
 
     std::cout << "텔레포트 완료: (" << newPosition.x << ", " << newPosition.y << ", " << newPosition.z << ")" << std::endl;
-} 
+}
