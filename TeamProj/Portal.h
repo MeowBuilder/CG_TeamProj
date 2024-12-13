@@ -23,6 +23,10 @@ private:
     unsigned int PORTAL_WIDTH;
     unsigned int PORTAL_HEIGHT;
     Camera virtualCamera;
+    glm::mat4 transform;
+    glm::vec3 normal;
+    glm::vec3 frontNormal;
+    glm::vec3 backNormal;
 
 public:
     Portal(glm::vec3 startPos = glm::vec3(0.0f)) :
@@ -61,4 +65,7 @@ public:
     bool IsInitialized() const { return isInitialized; }
     
     GLuint GetTexture() const { return textureColorbuffer; }
+
+    glm::mat4 getVirtualCameraMatrix(const Camera& playerCamera, bool isFrontSide);
+    glm::mat4 getObliqueViewFrustumMatrix(const glm::mat4& projMatrix, const glm::vec4& clipPlane);
 }; 

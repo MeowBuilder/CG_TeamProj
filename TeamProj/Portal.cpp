@@ -96,7 +96,7 @@ void Portal::RenderView(GLuint shaderProgramID, const Camera& playerCamera)
     glm::mat4 portalToPortalTransform = linkedPortalTransform * glm::inverse(portalTransform);
 
     glm::mat4 cameraTransform = glm::mat4(1.0f);
-    cameraTransform = glm::translate(cameraTransform, playerCamera.GetPosition());
+    cameraTransform = glm::translate(cameraTransform, playerCamera.getPosition());
     
     glm::vec3 front = playerCamera.GetFront();
     glm::vec3 up = playerCamera.GetUp();
@@ -327,3 +327,43 @@ void Portal::Teleport(Player& player) const
 
     std::cout << "텔레포트 완료: (" << newPosition.x << ", " << newPosition.y << ", " << newPosition.z << ")" << std::endl;
 }
+
+glm::mat4 Portal::getVirtualCameraMatrix(const Camera& playerCamera, bool isFrontSide) {
+    glm::mat4 portalToPortal = linkedPortal->transform * glm::inverse(transform);
+    
+    glm::vec3 camPos = playerCamera.getPosition();
+    glm::vec3 camDir = playerCamera.GetFront();
+    
+    // 포탈 기준 상대 위치 계산
+    glm::vec3 relativePos = camPos - glm::vec3(transform[3].x, transform[3].y, transform[3].z);
+    
+    // 포탈을 통과한 가상 카메라 위치 계산
+    glm::vec4 virtualPos = portalToPortal * glm::vec4(relativePos, 1.0f);
+    glm::vec4 virtualDir = portalToPortal * glm::vec4(camDir, 0.0f);
+    
+    // 최종 가상 카메라 매트릭스 생성
+    return glm::lookAt(
+        glm::vec3(virtualPos.x, virtualPos.y, virtualPos.z) + glm::vec3(linkedPortal->transform[3].x, linkedPortal->transform[3].y, linkedPortal->transform[3].z),
+        glm::vec3(virtualPos.x, virtualPos.y, virtualPos.z) + glm::vec3(linkedPortal->transform[3].x, linkedPortal->transform[3].y, linkedPortal->transform[3].z) + glm::normalize(glm::vec3(virtualDir.x, virtualDir.y, virtualDir.z)),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+}
+
+glm::mat4 Portal::getObliqueViewFrustumMatrix(const glm::mat4& projMatrix, const glm::vec4& clipPlane) {
+    glm::vec4 q = glm::inverse(projMatrix) * glm::vec4(
+        (clipPlane.x < 0.0f ? -1.0f : 1.0f),
+        (clipPlane.y < 0.0f ? -1.0f : 1.0f),
+        -1.0f,
+        1.0f
+    );
+    
+    glm::vec4 c = clipPlane * (2.0f / glm::dot(clipPlane, q));
+    
+    glm::mat4 newProj = projMatrix;
+    newProj[0][2] = c.x;
+    newProj[1][2] = c.y;
+    newProj[2][2] = c.z + 1.0f;
+    newProj[3][2] = c.w;
+    
+    return newProj;
+} 
