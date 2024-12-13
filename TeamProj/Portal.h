@@ -10,62 +10,7 @@ class Player;
 
 class Portal
 {
-private:
-    glm::vec3 position;
-    glm::vec3 rotation;
-    glm::vec3 size;
-    GLuint VAO, VBO;
-    GLuint framebuffer;
-    GLuint textureColorbuffer;
-    GLuint renderbuffer;
-    bool isInitialized;
-    Portal* linkedPortal;
-    unsigned int PORTAL_WIDTH;
-    unsigned int PORTAL_HEIGHT;
-    Camera virtualCamera;
-    glm::mat4 transform;
-    glm::vec3 normal;
-    glm::vec3 frontNormal;
-    glm::vec3 backNormal;
-
 public:
-    Portal(glm::vec3 startPos = glm::vec3(0.0f)) :
-        position(startPos),
-        rotation(glm::vec3(0.0f)),
-        size(glm::vec3(1.0f, 2.0f, 0.2f)),
-        isInitialized(false),
-        linkedPortal(nullptr),
-        PORTAL_WIDTH(1024),
-        PORTAL_HEIGHT(1024),
-        virtualCamera(startPos) {}
-
-    ~Portal();
-
-    bool InitializeBuffers();
-    void Render(GLuint shaderProgramID);
-    void RenderView(GLuint shaderProgramID, const Camera& playerCamera);
-    bool CheckCollision(const glm::vec3& objPos, const glm::vec3& objSize) const;
-    bool ShouldTeleport(const glm::vec3& prevPos, const glm::vec3& currentPos, const glm::vec3& objSize) const;
-    void Teleport(Player& player) const;
-    void LinkPortal(Portal* other) { linkedPortal = other; }
-
-    glm::vec3 GetPosition() const { return position; }
-    void SetPosition(const glm::vec3& pos) { 
-        position = pos;
-        virtualCamera.SetPosition(pos);
-    }
-
-    glm::vec3 GetRotation() const { return rotation; }
-    void SetRotation(const glm::vec3& rot) { rotation = rot; }
-
-    glm::vec3 GetSize() const { return size; }
-    void SetSize(const glm::vec3& s) { size = s; }
-
-    Portal* GetLinkedPortal() const { return linkedPortal; }
-    bool IsInitialized() const { return isInitialized; }
-    
-    GLuint GetTexture() const { return textureColorbuffer; }
-
-    glm::mat4 getVirtualCameraMatrix(const Camera& playerCamera, bool isFrontSide);
-    glm::mat4 getObliqueViewFrustumMatrix(const glm::mat4& projMatrix, const glm::vec4& clipPlane);
+    // 포털 관련 기능을 제거했습니다.
+    // 필요에 따라 다른 멤버 변수 및 메서드를 추가할 수 있습니다.
 }; 
