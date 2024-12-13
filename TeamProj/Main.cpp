@@ -34,17 +34,33 @@ float lastY = WIN_H / 2.0f;
 
 bool keys[256] = { false };
 
+Portal portal1(glm::vec3(-3.0f, 1.6f, 0.0f));
+Portal portal2(glm::vec3(3.0f, 1.6f, 0.0f));
+
 void RenderScene(GLuint shaderProgramID, bool skipPortals = false)
 {
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Draw(shaderProgramID);
 	}
 	player.Render(shaderProgramID);
+	
+	if (!skipPortals) {
+		portal1.Render(shaderProgramID);
+		portal2.Render(shaderProgramID);
+	}
 }
 
 GLvoid drawScene()
 {
 	glUseProgram(shader1.shaderProgramID);
+
+	portal1.RenderView(shader1.shaderProgramID, player.GetCamera());
+	RenderScene(shader1.shaderProgramID, true);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	portal2.RenderView(shader1.shaderProgramID, player.GetCamera());
+	RenderScene(shader1.shaderProgramID, true);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glViewport(0, 0, WIN_W, WIN_H);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -105,6 +121,25 @@ GLvoid TimerFunction(int value)
 
 	player.Move(moveDir, deltaTime);
 	player.Update(deltaTime);
+
+	static bool canTeleport = true;
+	
+	if (canTeleport) {
+		if (portal1.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
+			portal1.Teleport(player);
+			canTeleport = false;
+		}
+		else if (portal2.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
+			portal2.Teleport(player);
+			canTeleport = false;
+		}
+	}
+	else {
+		if (!portal1.CheckCollision(player.GetPosition(), player.GetColliderSize()) &&
+			!portal2.CheckCollision(player.GetPosition(), player.GetColliderSize())) {
+			canTeleport = true;
+		}
+	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Update(deltaTime);
@@ -258,13 +293,13 @@ int main(int argc, char** argv)
 	}
 
 	glm::vec3 cubePositions[] = {
-	glm::vec3(0.0f, -0.5f, 0.0f),  // Ã¹ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½
-	glm::vec3(50.0f, -0.5f, 0.0f)  // ï¿½ï¿½ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ (ï¿½Ö¸ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡)
+	glm::vec3(0.0f, -0.5f, 0.0f),  // Ã¹ ¹øÂ° ¹ßÆÇ
+	glm::vec3(50.0f, -0.5f, 0.0f)  // µÎ ¹øÂ° ¹ßÆÇ (¸Ö¸® ¶³¾îÁø À§Ä¡)
 	};
 
 	glm::vec3 cubeSizes[] = {
-		glm::vec3(10.0f, 1.0f, 10.0f),   // Ã¹ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½
-		glm::vec3(10.0f, 1.0f, 10.0f)    // ï¿½ï¿½ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ Å©ï¿½ï¿½
+		glm::vec3(10.0f, 1.0f, 10.0f),   // Ã¹ ¹øÂ° ¹ßÆÇ Å©±â
+		glm::vec3(10.0f, 1.0f, 10.0f)    // µÎ ¹øÂ° ¹ßÆÇ Å©±â
 	};
 
 	
@@ -284,18 +319,18 @@ int main(int argc, char** argv)
 		}
 	}
 
-	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));  // Ã¹ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));  // Ã¹ ¹øÂ° ¹ßÆÇ À§ ½ÃÀÛ
 	
 	if (!player.InitializeBuffers()) {
 		cerr << "Error: Player Buffer Initialization Failed" << endl;
 		std::exit(EXIT_FAILURE);
 	}
 
-	// ï¿½ï¿½Å» ï¿½ï¿½Ä¡
-	portal1.SetPosition(glm::vec3(0.0f, 1.0f, -2.0f));  // Ã¹ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Å»
-	portal2.SetPosition(glm::vec3(50.0f, 1.0f, 2.0f)); // ï¿½ï¿½ ï¿½ï¿½Â° ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½Å»
+	// Æ÷Å» À§Ä¡
+	portal1.SetPosition(glm::vec3(0.0f, 1.0f, -2.0f));  // Ã¹ ¹øÂ° ¹ßÆÇ À§ Æ÷Å»
+	portal2.SetPosition(glm::vec3(50.0f, 1.0f, 2.0f)); // µÎ ¹øÂ° ¹ßÆÇ À§ Æ÷Å»
 
-	// ï¿½ï¿½Å» Å©ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	// Æ÷Å» Å©±â ¹× ¹æÇâ ¼³Á¤
 	portal1.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
 	portal2.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
 	portal1.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
