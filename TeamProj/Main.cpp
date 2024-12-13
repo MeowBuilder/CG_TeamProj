@@ -34,31 +34,12 @@ float lastY = WIN_H / 2.0f;
 
 bool keys[256] = { false };
 
-Portal portalA, portalB;
-
 void RenderScene(GLuint shaderProgramID, bool skipPortals = false)
 {
-	for (int i = 0; i < NUM_CUBES; i++) {
+	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Draw(shaderProgramID);
 	}
 	player.Render(shaderProgramID);
-}
-
-void InitializePortals() {
-	glm::vec3 portalAPos = glm::vec3(-5.0f, 1.5f, 0.0f);
-	glm::vec3 portalANormal = glm::vec3(1.0f, 0.0f, 0.0f);
-	portalA = Portal(portalAPos, portalANormal);
-	
-	glm::vec3 portalBPos = glm::vec3(5.0f, 1.5f, 0.0f);
-	glm::vec3 portalBNormal = glm::vec3(-1.0f, 0.0f, 0.0f);
-	portalB = Portal(portalBPos, portalBNormal);
-	
-	portalA.LinkPortal(&portalB);
-	portalB.LinkPortal(&portalA);
-	
-	portalA.Initialize(WIN_W, WIN_H);
-	portalB.Initialize(WIN_W, WIN_H);
-	Portal::SetRenderSceneCallback(RenderScene);
 }
 
 GLvoid drawScene()
@@ -70,26 +51,18 @@ GLvoid drawScene()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glEnable(GL_DEPTH_TEST);
-	
-	// 기본 변환 행렬 설정
+	glEnable(GL_CULL_FACE);
+
 	float aspectRatio = (float)WIN_W / (float)WIN_H;
 	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
-	glUniformMatrix4fv(glGetUniformLocation(shader1.shaderProgramID, "projectionTransform"), 1, GL_FALSE, &projection[0][0]);
+	unsigned int projectionLocation = glGetUniformLocation(shader1.shaderProgramID, "projectionTransform");
+	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 
 	glm::mat4 view = player.GetCamera().GetViewMatrix();
-	glUniformMatrix4fv(glGetUniformLocation(shader1.shaderProgramID, "viewTransform"), 1, GL_FALSE, &view[0][0]);
+	unsigned int viewLocation = glGetUniformLocation(shader1.shaderProgramID, "viewTransform");
+	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
-	// 포탈 렌더링 활성화
-	portalA.RenderView(player.GetCamera(), shader1.shaderProgramID);
-	portalB.RenderView(player.GetCamera(), shader1.shaderProgramID);
-
-	// 기본 씬 렌더링
-	glUniform1i(glGetUniformLocation(shader1.shaderProgramID, "useTexture"), 0);
 	RenderScene(shader1.shaderProgramID, false);
-
-	// 포탈 프레임 렌더링
-	portalA.RenderPortal(shader1.shaderProgramID);
-	portalB.RenderPortal(shader1.shaderProgramID);
 
 	glutSwapBuffers();
 }
@@ -97,56 +70,6 @@ GLvoid drawScene()
 GLvoid Reshape(int w, int h)
 {
 	glViewport(0, 0, WIN_W, WIN_H);
-}
-
-void CheckPortalTransition() {
-	glm::vec3 playerPos = player.GetPosition();
-	glm::vec3 prevPos = player.GetPreviousPosition();
-	
-	// 포탈 A 체크
-	if (portalA.IsPointInPortal(playerPos) && 
-		portalA.IsInFront(prevPos) != portalA.IsInFront(playerPos)) {
-		
-		glm::vec3 localPos = portalA.WorldToPortalSpace(playerPos);
-		glm::vec3 newPos = portalB.PortalToWorldSpace(localPos);
-		
-		glm::vec3 localVel = portalA.WorldToPortalSpace(player.GetVelocity() + prevPos) - 
-							portalA.WorldToPortalSpace(prevPos);
-		glm::vec3 newVel = portalB.PortalToWorldSpace(localVel + portalB.GetPosition()) - 
-						  portalB.GetPosition();
-		
-		player.SetPosition(newPos);
-		player.SetVelocity(newVel);
-		
-		// 카메라 방향도 변환
-		glm::vec3 localFront = portalA.WorldToPortalSpace(player.GetCamera().GetFront() + prevPos) - 
-							  portalA.WorldToPortalSpace(prevPos);
-		glm::vec3 newFront = portalB.PortalToWorldSpace(localFront + portalB.GetPosition()) - 
-							portalB.GetPosition();
-		player.GetCamera().SetFront(glm::normalize(newFront));
-	}
-	
-	// 포탈 B에 대해서도 동일한 검사
-	if (portalB.IsPointInPortal(playerPos) && 
-		portalB.IsInFront(prevPos) != portalB.IsInFront(playerPos)) {
-		
-		glm::vec3 localPos = portalB.WorldToPortalSpace(playerPos);
-		glm::vec3 newPos = portalA.PortalToWorldSpace(localPos);
-		
-		glm::vec3 localVel = portalB.WorldToPortalSpace(player.GetVelocity() + prevPos) - 
-							portalB.WorldToPortalSpace(prevPos);
-		glm::vec3 newVel = portalA.PortalToWorldSpace(localVel + portalA.GetPosition()) - 
-						  portalA.GetPosition();
-		
-		player.SetPosition(newPos);
-		player.SetVelocity(newVel);
-		
-		glm::vec3 localFront = portalB.WorldToPortalSpace(player.GetCamera().GetFront() + prevPos) - 
-							  portalB.WorldToPortalSpace(prevPos);
-		glm::vec3 newFront = portalA.PortalToWorldSpace(localFront + portalA.GetPosition()) - 
-							portalA.GetPosition();
-		player.GetCamera().SetFront(glm::normalize(newFront));
-	}
 }
 
 GLvoid TimerFunction(int value)
@@ -182,7 +105,6 @@ GLvoid TimerFunction(int value)
 
 	player.Move(moveDir, deltaTime);
 	player.Update(deltaTime);
-	CheckPortalTransition();
 
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Update(deltaTime);
@@ -316,7 +238,7 @@ void MouseMotion(int x, int y)
 int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_STENCIL);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(WIN_X, WIN_Y);
 	glutInitWindowSize(WIN_W, WIN_H);
 	glutCreateWindow("Example1");

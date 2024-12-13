@@ -1,6 +1,4 @@
 #include "Portal.h"
-#include <iostream>
-#include <glm/gtc/matrix_transform.hpp>
 
 Portal::~Portal()
 {

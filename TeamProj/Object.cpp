@@ -60,28 +60,24 @@ bool Object::Set_Obj(GLuint shaderProgramID, const char* path) {
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	// 버텍스 위치
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(glm::vec3), &vertices[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
 
-	// 텍스처 좌표 (임시 데이터)
-	std::vector<glm::vec2> tempUVs(vertices.size(), glm::vec2(0.0f, 0.0f));
-	GLuint uvVBO;
-	glGenBuffers(1, &uvVBO);
-	glBindBuffer(GL_ARRAY_BUFFER, uvVBO);
-	glBufferData(GL_ARRAY_BUFFER, tempUVs.size() * sizeof(glm::vec2), &tempUVs[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
-
-	// 인덱스
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vertexIndices.size() * sizeof(unsigned int), &vertexIndices[0], GL_STATIC_DRAW);
 
+	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
+	if (positionAttribute == -1) {
+		cerr << "position Ӽ  ";
+		return false;
+	}
+	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(positionAttribute);
+
 	glBindVertexArray(0);
+
 	return true;
 }
 
@@ -89,6 +85,9 @@ void Object::Draw(GLuint shaderProgramID) {
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, position);
 	model = glm::scale(model, size);
+	
+	unsigned int modelLocation = glGetUniformLocation(shaderProgramID, "transform");
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, &model[0][0]);
 
 	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
 	

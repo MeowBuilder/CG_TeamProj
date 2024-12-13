@@ -16,7 +16,6 @@ private:
     GLuint VAO, VBO;
     bool isInitialized;
     bool isGrounded;
-    glm::vec3 previousPosition;
     
     Camera camera;
 
@@ -28,7 +27,6 @@ public:
         colliderSize(glm::vec3(0.8f, 1.6f, 0.8f)),
         isInitialized(false),
         isGrounded(false),
-        previousPosition(startPos),
         camera(startPos) {}
 
     ~Player();
@@ -64,6 +62,5 @@ public:
     Camera& GetCamera() { return camera; }
     
     void Jump();
-    
-    const glm::vec3& GetPreviousPosition() const { return previousPosition; }
 };
+
