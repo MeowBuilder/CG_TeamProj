@@ -10,9 +10,8 @@
 #include <iomanip>
 
 #include "Shader.h"
-#include "Object.h"
 #include "Player.h"
-#include "Portal.h"
+#include "Stage.h"
 
 using namespace std;
 
@@ -32,90 +31,17 @@ float lastY = WIN_H / 2.0f;
 
 bool keys[256] = { false };
 
-const int NUM_CUBES = 5;
-Object cubes[NUM_CUBES];
-
-vector<Portal> portals;
+Stage* stage;
 
 void InitStage() {
-	glm::vec3 cubePositions[] = {
-	glm::vec3(0.0f, -0.5f, 0.0f),
-	glm::vec3(0.0f, 0.5f, -1.0f)
-	};
-
-	glm::vec3 cubeSizes[] = {
-		glm::vec3(20.0f, 1.0f, 20.0f),
-		glm::vec3(1.0f)
-	};
-
-	glm::vec3 cubeColor[] = {
-		glm::vec3(1.0f),
-		glm::vec3(1.0f,0.0f,0.0f)
-	};
-
-	float Moveable[] = {
-		false,
-		true
-	};
-
-	for (int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Set_Obj(shader1.shaderProgramID, "cube.obj");
-		cubes[i].SetPosition(cubePositions[i]);
-		cubes[i].SetSize(cubeSizes[i]);
-		cubes[i].SetRGB(cubeColor[i]);
-
-		cubes[i].SetMovable(Moveable[i]);
-		cubes[i].SetMass(1.0f);
-	}
-
-	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));
-
-	if (!player.InitializeBuffers()) {
-		cerr << "Error: Player Buffer Initialization Failed" << endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-	portals.push_back(Portal(glm::vec3(3.0, 2.0, 0.0)));
-	portals.push_back(Portal(glm::vec3(6.0, 2.0, 0.0)));
-	portals.push_back(Portal(glm::vec3(9.0, 2.0, 0.0)));
-	portals[0].LinkPortal(&portals[1]);
-	portals[1].LinkPortal(&portals[2]);
-	portals[2].LinkPortal(&portals[0]);
-
-	for (auto& portal : portals)
-	{
-		portal.SetRotation(glm::vec3(0.0f));
-		portal.SetSize(glm::vec3(2.0f, 4.0f, 0.2f));
-		portal.InitializeBuffers();
-	}
+	stage = new Stage(&shader1, &player);
+	stage->Initialize();
 }
 
-void RenderScene(GLuint shaderProgramID, bool skipPortals = false)
-{
-	for(int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Draw(shaderProgramID);
-	}
-
-	player.Render(shaderProgramID);
-	
-	if (!skipPortals) {
-		for (auto& portal : portals)
-		{
-			portal.Render(shaderProgramID);
-		}
-	}
-}
-
-GLvoid drawScene()
-{
+GLvoid drawScene(){
 	glUseProgram(shader1.shaderProgramID);
 
-	for (auto& portal : portals)
-	{
-		portal.RenderView(shader1.shaderProgramID, player.GetCamera());
-		RenderScene(shader1.shaderProgramID, true);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	}
+	stage->RenderPortal();
 
 	glViewport(0, 0, WIN_W, WIN_H);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -133,7 +59,7 @@ GLvoid drawScene()
 	unsigned int viewLocation = glGetUniformLocation(shader1.shaderProgramID, "viewTransform");
 	glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
-	RenderScene(shader1.shaderProgramID, false);
+	stage->Render();
 
 	glutSwapBuffers();
 }
@@ -171,110 +97,9 @@ GLvoid TimerFunction(int value)
 		player.SetGrounded(false);
 	}
 
-	glm::vec3 prevPosition = player.GetPosition();
-	player.SetGrounded(false);
-
 	player.Move(moveDir, deltaTime);
-	player.Update(deltaTime);
 
-	static bool canTeleport = true;
-
-	if (canTeleport) {
-		for (auto& portal : portals)
-		{
-			if (portal.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
-				portal.Teleport(player);
-				canTeleport = false;
-				break;
-			}
-		}
-	}
-	else {
-		bool check = true;
-		for (auto& portal : portals)
-		{
-			if (portal.CheckCollision(player.GetPosition(), player.GetColliderSize())) {
-				check = false;
-				break;
-			}
-		}
-		if (check) canTeleport = true;
-	}
-
-	std::vector<Object*> staticObjects;
-
-	for (Object obj : cubes) {
-		if (!obj.IsMovable()) {
-			staticObjects.push_back(&obj);
-		}
-	}
-
-	for(int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Update(deltaTime, staticObjects);
-	}
-
-	for(int i = 0; i < NUM_CUBES; i++) {
-
-		for(int j = i + 1; j < NUM_CUBES; j++) {
-
-			glm::vec3 normal;
-			float penetration;
-			
-			if (cubes[i].CheckCollisionWithBox(cubes[j].GetPosition(), cubes[j].GetSize(), normal, penetration)) {
-				if (cubes[i].IsMovable() && !cubes[j].IsMovable()) {
-					cubes[i].HandleCollision(&cubes[j], -normal, penetration);
-				}
-				else if (!cubes[i].IsMovable() && cubes[j].IsMovable()) {
-					cubes[j].HandleCollision(&cubes[i], normal, penetration);
-				}
-				else if (cubes[i].IsMovable() && cubes[j].IsMovable()) {
-					cubes[i].HandleCollision(&cubes[j], -normal, penetration);
-					cubes[j].HandleCollision(&cubes[i], normal, penetration);
-				}
-			}
-		}
-	}
-
-	for(int i = 0; i < NUM_CUBES; i++) {
-		glm::vec3 normal;
-		float penetration;
-		
-		if (cubes[i].CheckCollisionWithBox(player.GetPosition(), player.GetColliderSize(), normal, penetration)) {
-			if (cubes[i].IsMovable()) {
-				glm::vec3 pushVelocity = player.GetVelocity();
-				if (glm::length(pushVelocity) > 0.1f) {
-					pushVelocity.y = 0.0f;
-					cubes[i].SetVelocity(cubes[i].GetVelocity() + pushVelocity);
-				}
-			}
-
-			glm::vec3 correction;
-			if (normal.y > 0.7f) {
-				correction = glm::vec3(0.0f, penetration, 0.0f);
-				player.SetPosition(player.GetPosition() + correction);
-				
-				if (player.GetVelocity().y < 0) {
-					player.SetGrounded(true);
-					glm::vec3 vel = player.GetVelocity();
-						vel.y = 0.0f;
-					player.SetVelocity(vel);
-				}
-			}
-			else {
-				player.SetPosition(prevPosition);
-				glm::vec3 vel = player.GetVelocity();
-				float velDotNormal = glm::dot(vel, normal);
-				if (velDotNormal < 0) {
-					vel = vel - (normal * velDotNormal);
-					if (abs(normal.y) < 0.7f) {
-						vel.x *= 0.1f;
-						vel.z *= 0.1f;
-					}
-				}
-				player.SetVelocity(vel);
-			}
-		}
-	}
+	stage->Update(deltaTime);
 
 	glutPostRedisplay();
 	glutTimerFunc(16, TimerFunction, 1);
