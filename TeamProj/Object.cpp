@@ -98,11 +98,8 @@ void Object::Draw(GLuint shaderProgramID) {
 	glBindVertexArray(0);
 }
 
-void Object::Update(float deltaTime)
-{
+void Object::Update(float deltaTime, const std::vector<Object*>& staticObjects) {
 	if (!isMovable) return;
-
-	glm::vec3 prevPosition = position;
 
 	const float GRAVITY = -9.8f;
 	velocity.y += GRAVITY * deltaTime;
@@ -115,12 +112,13 @@ void Object::Update(float deltaTime)
 
 	position += velocity * deltaTime;
 
-	if (IsOnFloor()) {
-		if (position.y - size.y/2 <= 0.0f) {
-			position.y = size.y/2;
-			velocity.y = 0.0f;
-			isGrounded = true;
-		}
+	// 이동 불가 오브젝트 위에 있는지 확인
+	if (IsOnFloor(staticObjects)) {
+		velocity.y = 0.0f; // 중력 영향 제거
+		isGrounded = true;
+	}
+	else {
+		isGrounded = false;
 	}
 
 	if (isGrounded) {
@@ -139,6 +137,7 @@ void Object::Update(float deltaTime)
 		}
 	}
 }
+
 
 bool Object::CheckCollisionWithBox(const glm::vec3& otherPos, const glm::vec3& otherSize, glm::vec3& normal, float& penetration) const
 {
@@ -214,8 +213,20 @@ void Object::HandleCollision(Object* other, const glm::vec3& normal, float penet
 	}
 }
 
-bool Object::IsOnFloor() const {
-	const float FLOOR_SIZE = 10.0f;
-	return (position.x >= -FLOOR_SIZE && position.x <= FLOOR_SIZE &&
-			position.z >= -FLOOR_SIZE && position.z <= FLOOR_SIZE);
+bool Object::IsOnFloor(const std::vector<Object*>& staticObjects) const {
+	for (const Object* other : staticObjects) {
+		if (!other->IsMovable()) {
+			glm::vec3 normal;
+			float penetration;
+
+			// 충돌 검사
+			if (CheckCollisionWithBox(other->GetPosition(), other->GetSize(), normal, penetration)) {
+				// y축 기준으로 위에 있는지 확인
+				if (normal.y > 0.9f && position.y > other->GetPosition().y) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
 }

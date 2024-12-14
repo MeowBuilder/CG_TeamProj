@@ -38,9 +38,9 @@ public:
 	
 	bool Set_Obj(GLuint shaderProgramID, const char* path);
 	void Draw(GLuint shaderProgramID);
-	void Update(float deltaTime);
+	void Update(float deltaTime, const std::vector<Object*>& staticObjects);
 	void HandleCollision(Object* other, const glm::vec3& normal, float penetration);
-	bool IsOnFloor() const;
+	bool IsOnFloor(const std::vector<Object*>& staticObjects) const;
 	bool CheckCollisionWithBox(const glm::vec3& otherPos, const glm::vec3& otherSize, glm::vec3& normal, float& penetration) const;
 
 	glm::vec3 GetPosition() const { return position; }

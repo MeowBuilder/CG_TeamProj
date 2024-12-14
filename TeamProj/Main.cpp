@@ -20,13 +20,11 @@ const int WIN_X = 0, WIN_Y = 0;
 const int WIN_W = 1920, WIN_H = 1080;
 
 bool isCulling = true;
-const int NUM_CUBES = 5;
 
 GLfloat mx = 0.0f;
 GLfloat my = 0.0f;
 
 Shader shader1;
-Object cubes[NUM_CUBES];
 Player player(glm::vec3(0.0f, 0.0f, 0.0f));
 bool firstMouse = true;
 float lastX = WIN_W / 2.0f;
@@ -34,19 +32,77 @@ float lastY = WIN_H / 2.0f;
 
 bool keys[256] = { false };
 
-Portal portal1(glm::vec3(-3.0f, 1.6f, 0.0f));
-Portal portal2(glm::vec3(3.0f, 1.6f, 0.0f));
+const int NUM_CUBES = 5;
+Object cubes[NUM_CUBES];
+
+vector<Portal> portals;
+
+void InitStage() {
+	glm::vec3 cubePositions[] = {
+	glm::vec3(0.0f, -0.5f, 0.0f),
+	glm::vec3(0.0f, 0.5f, -1.0f)
+	};
+
+	glm::vec3 cubeSizes[] = {
+		glm::vec3(20.0f, 1.0f, 20.0f),
+		glm::vec3(1.0f)
+	};
+
+	glm::vec3 cubeColor[] = {
+		glm::vec3(1.0f),
+		glm::vec3(1.0f,0.0f,0.0f)
+	};
+
+	float Moveable[] = {
+		false,
+		true
+	};
+
+	for (int i = 0; i < NUM_CUBES; i++) {
+		cubes[i].Set_Obj(shader1.shaderProgramID, "cube.obj");
+		cubes[i].SetPosition(cubePositions[i]);
+		cubes[i].SetSize(cubeSizes[i]);
+		cubes[i].SetRGB(cubeColor[i]);
+
+		cubes[i].SetMovable(Moveable[i]);
+		cubes[i].SetMass(1.0f);
+	}
+
+	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));
+
+	if (!player.InitializeBuffers()) {
+		cerr << "Error: Player Buffer Initialization Failed" << endl;
+		std::exit(EXIT_FAILURE);
+	}
+
+	portals.push_back(Portal(glm::vec3(3.0, 2.0, 0.0)));
+	portals.push_back(Portal(glm::vec3(6.0, 2.0, 0.0)));
+	portals.push_back(Portal(glm::vec3(9.0, 2.0, 0.0)));
+	portals[0].LinkPortal(&portals[1]);
+	portals[1].LinkPortal(&portals[2]);
+	portals[2].LinkPortal(&portals[0]);
+
+	for (auto& portal : portals)
+	{
+		portal.SetRotation(glm::vec3(0.0f));
+		portal.SetSize(glm::vec3(2.0f, 4.0f, 0.2f));
+		portal.InitializeBuffers();
+	}
+}
 
 void RenderScene(GLuint shaderProgramID, bool skipPortals = false)
 {
 	for(int i = 0; i < NUM_CUBES; i++) {
 		cubes[i].Draw(shaderProgramID);
 	}
+
 	player.Render(shaderProgramID);
 	
 	if (!skipPortals) {
-		portal1.Render(shaderProgramID);
-		portal2.Render(shaderProgramID);
+		for (auto& portal : portals)
+		{
+			portal.Render(shaderProgramID);
+		}
 	}
 }
 
@@ -54,13 +110,12 @@ GLvoid drawScene()
 {
 	glUseProgram(shader1.shaderProgramID);
 
-	portal1.RenderView(shader1.shaderProgramID, player.GetCamera());
-	RenderScene(shader1.shaderProgramID, true);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	portal2.RenderView(shader1.shaderProgramID, player.GetCamera());
-	RenderScene(shader1.shaderProgramID, true);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	for (auto& portal : portals)
+	{
+		portal.RenderView(shader1.shaderProgramID, player.GetCamera());
+		RenderScene(shader1.shaderProgramID, true);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 
 	glViewport(0, 0, WIN_W, WIN_H);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -123,42 +178,39 @@ GLvoid TimerFunction(int value)
 	player.Update(deltaTime);
 
 	static bool canTeleport = true;
-	
+
 	if (canTeleport) {
-		if (portal1.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
-			portal1.Teleport(player);
-			canTeleport = false;
-		}
-		else if (portal2.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
-			portal2.Teleport(player);
-			canTeleport = false;
+		for (auto& portal : portals)
+		{
+			if (portal.ShouldTeleport(prevPosition, player.GetPosition(), player.GetColliderSize())) {
+				portal.Teleport(player);
+				canTeleport = false;
+				break;
+			}
 		}
 	}
 	else {
-		if (!portal1.CheckCollision(player.GetPosition(), player.GetColliderSize()) &&
-			!portal2.CheckCollision(player.GetPosition(), player.GetColliderSize())) {
-			canTeleport = true;
+		bool check = true;
+		for (auto& portal : portals)
+		{
+			if (portal.CheckCollision(player.GetPosition(), player.GetColliderSize())) {
+				check = false;
+				break;
+			}
+		}
+		if (check) canTeleport = true;
+	}
+
+	std::vector<Object*> staticObjects;
+
+	for (Object obj : cubes) {
+		if (!obj.IsMovable()) {
+			staticObjects.push_back(&obj);
 		}
 	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Update(deltaTime);
-	}
-
-	glm::vec3 pos = player.GetPosition();
-	const float FLOOR_SIZE = 2.0f;
-	bool isOnFloor = (pos.x >= -FLOOR_SIZE && pos.x <= FLOOR_SIZE &&
-					 pos.z >= -FLOOR_SIZE && pos.z <= FLOOR_SIZE);
-
-	if (isOnFloor && pos.y - player.GetColliderSize().y/2 <= 0.0f) {
-		pos.y = player.GetColliderSize().y/2;
-		player.SetPosition(pos);
-		if (player.GetVelocity().y < 0) {
-			player.SetGrounded(true);
-			glm::vec3 vel = player.GetVelocity();
-			vel.y = 0.0f;
-			player.SetVelocity(vel);
-		}
+		cubes[i].Update(deltaTime, staticObjects);
 	}
 
 	for(int i = 0; i < NUM_CUBES; i++) {
@@ -292,56 +344,7 @@ int main(int argc, char** argv)
 		std::exit(EXIT_FAILURE);
 	}
 
-	glm::vec3 cubePositions[] = {
-	glm::vec3(0.0f, -0.5f, 0.0f),  // 첫 번째 발판
-	glm::vec3(50.0f, -0.5f, 0.0f)  // 두 번째 발판 (멀리 떨어진 위치)
-	};
-
-	glm::vec3 cubeSizes[] = {
-		glm::vec3(10.0f, 1.0f, 10.0f),   // 첫 번째 발판 크기
-		glm::vec3(10.0f, 1.0f, 10.0f)    // 두 번째 발판 크기
-	};
-
-	
-
-	for(int i = 0; i < NUM_CUBES; i++) {
-		cubes[i].Set_Obj(shader1.shaderProgramID, "cube.obj");
-		cubes[i].SetPosition(cubePositions[i]);
-		cubes[i].SetSize(cubeSizes[i]);
-		cubes[i].SetRGB(glm::vec3(1.0f));
-		
-		if (i <= 1) {
-			cubes[i].SetMovable(false);
-		}
-		else {
-			cubes[i].SetMovable(true);
-			cubes[i].SetMass(1.0f);
-		}
-	}
-
-	player.SetPosition(glm::vec3(0.0f, 0.6f, 0.0f));  // 첫 번째 발판 위 시작
-	
-	if (!player.InitializeBuffers()) {
-		cerr << "Error: Player Buffer Initialization Failed" << endl;
-		std::exit(EXIT_FAILURE);
-	}
-
-	// 포탈 위치
-	portal1.SetPosition(glm::vec3(0.0f, 1.0f, -2.0f));  // 첫 번째 발판 위 포탈
-	portal2.SetPosition(glm::vec3(50.0f, 1.0f, 2.0f)); // 두 번째 발판 위 포탈
-
-	// 포탈 크기 및 방향 설정
-	portal1.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-	portal2.SetRotation(glm::vec3(0.0f, 0.0f, 0.0f));
-	portal1.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
-	portal2.SetSize(glm::vec3(2.0f, 3.2f, 0.2f));
-	portal1.LinkPortal(&portal2);
-	portal2.LinkPortal(&portal1);
-
-	if (!portal1.InitializeBuffers() || !portal2.InitializeBuffers()) {
-		cerr << "Error: Portal Buffer Initialization Failed" << endl;
-		std::exit(EXIT_FAILURE);
-	}
+	InitStage();
 
 	glutDisplayFunc(drawScene);
 	glutReshapeFunc(Reshape);
