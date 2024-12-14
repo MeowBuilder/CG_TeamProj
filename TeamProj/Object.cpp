@@ -91,7 +91,7 @@ void Object::Draw(GLuint shaderProgramID) {
 
 	unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
 	
-	glUniform3f(colorLocation, RGB.x, RGB.y, RGB.z);
+	glUniform3f(colorLocation, cubecolor.x, cubecolor.y, cubecolor.z);
 
 	glBindVertexArray(VAO);
 	glDrawElements(GL_TRIANGLES, vertexIndices.size(), GL_UNSIGNED_INT, 0);

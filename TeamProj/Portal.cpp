@@ -121,13 +121,35 @@ void Portal::RenderView(GLuint shaderProgramID, const Camera& playerCamera)
     virtualCamera.SetFront(glm::normalize(virtualFront));
     virtualCamera.SetUp(glm::normalize(virtualUp));
 
+    // 클리핑 평면 계산
+    glm::vec3 clipPlaneNormal = glm::vec3(
+        -sin(glm::radians(linkedPortal->rotation.y)),
+        0.0f,
+        cos(glm::radians(linkedPortal->rotation.y))
+    );
+    glm::vec3 clipPlanePoint = linkedPortal->position;
+    glm::vec4 clipPlane = glm::vec4(clipPlaneNormal, -glm::dot(clipPlaneNormal, clipPlanePoint));
+
     // 뷰 행렬과 투영 행렬 설정
     glm::mat4 view = virtualCamera.GetViewMatrix();
+    glm::vec4 viewSpaceClipPlane = glm::transpose(glm::inverse(view)) * clipPlane;
+
+    // 투영 행렬 계산 (Oblique View Frustum)
+    float aspectRatio = (float)PORTAL_WIDTH / (float)PORTAL_HEIGHT;
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    glm::vec4 clipProj = glm::inverse(projection) * viewSpaceClipPlane;
+
+    if (clipProj.w != 0.0f) {
+        glm::vec4 correctedPlane = clipProj / clipProj.w;
+        projection[2] = glm::vec4(correctedPlane.x, correctedPlane.y, correctedPlane.z, 0.0f);
+        projection[3] = glm::vec4(correctedPlane.x, correctedPlane.y, correctedPlane.z, correctedPlane.w);
+    }
+
+
     unsigned int viewLocation = glGetUniformLocation(shaderProgramID, "viewTransform");
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
-    float aspectRatio = (float)PORTAL_WIDTH / (float)PORTAL_HEIGHT;
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
     unsigned int projectionLocation = glGetUniformLocation(shaderProgramID, "projectionTransform");
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 

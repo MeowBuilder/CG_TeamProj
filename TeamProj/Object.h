@@ -18,7 +18,7 @@ class Object
 	glm::vec3 position;
 	glm::vec3 size;
 	glm::vec3 velocity;
-	glm::vec3 RGB;
+	glm::vec3 cubecolor;
 	bool isMovable;
 	bool isGrounded;
 	float mass;
@@ -26,11 +26,12 @@ class Object
 
 public:
 	GLuint VAO, VBO, EBO;
-	
-	Object() : 
-		position(0.0f), 
+
+	Object() :
+		position(0.0f),
 		size(1.0f), 
 		velocity(0.0f),
+		cubecolor(1.0f),
 		isMovable(false),
 		isGrounded(false),
 		mass(1.0f),
@@ -55,7 +56,7 @@ public:
 	bool IsMovable() const { return isMovable; }
 	void SetMovable(bool movable) { isMovable = movable; }
 
-	void SetRGB(glm::vec3 nRGB) { RGB = nRGB; }
+	void SetRGB(const glm::vec3& nRGB) { cubecolor = nRGB; }
 
 	bool IsGrounded() const { return isGrounded; }
 	void SetGrounded(bool grounded) { isGrounded = grounded; }
