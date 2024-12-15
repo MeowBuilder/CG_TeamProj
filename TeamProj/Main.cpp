@@ -24,8 +24,7 @@ GLfloat mx = 0.0f;
 GLfloat my = 0.0f;
 
 Shader shader1;
-Player player(glm::vec3(0.0f, 0.0f, 0.0f));
-bool firstMouse = true;
+Player player(glm::vec3(0.0f, 0.0f, 10.0f));
 float lastX = WIN_W / 2.0f;
 float lastY = WIN_H / 2.0f;
 
@@ -51,7 +50,7 @@ GLvoid drawScene(){
 	glEnable(GL_CULL_FACE);
 
 	float aspectRatio = (float)WIN_W / (float)WIN_H;
-	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+	glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 50.0f);
 	unsigned int projectionLocation = glGetUniformLocation(shader1.shaderProgramID, "projectionTransform");
 	glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 
@@ -128,10 +127,6 @@ GLvoid KeyboardUp(unsigned char key, int x, int y)
 
 void Mouse(int button, int state, int x, int y)
 {
-	if (state == GLUT_DOWN)
-	{
-		 firstMouse = true;
-	}
 	glutPostRedisplay();
 }
 

@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 #include "Camera.h"
 
-// 전방 선언
 class Player;
 
 class Portal
@@ -33,13 +32,15 @@ public:
         linkedPortal(nullptr),
         PORTAL_WIDTH(1024),
         PORTAL_HEIGHT(1024),
-        virtualCamera(startPos) {}
+        virtualCamera(startPos),
+        isend(false) {}
 
     ~Portal();
 
     bool InitializeBuffers();
     void Render(GLuint shaderProgramID);
     void RenderView(GLuint shaderProgramID, const Camera& playerCamera);
+    glm::mat4 ModifyProjectionMatrixForClipping(const glm::mat4& proj, const glm::vec4& clipPlane);
     bool CheckCollision(const glm::vec3& objPos, const glm::vec3& objSize) const;
     bool ShouldTeleport(const glm::vec3& prevPos, const glm::vec3& currentPos, const glm::vec3& objSize) const;
     void Teleport(Player& player) const;
@@ -61,4 +62,7 @@ public:
     bool IsInitialized() const { return isInitialized; }
     
     GLuint GetTexture() const { return textureColorbuffer; }
+
+    bool isend;
+    void Setend() { isend = true; }
 }; 

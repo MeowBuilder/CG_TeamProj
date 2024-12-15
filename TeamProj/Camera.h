@@ -25,8 +25,6 @@ public:
     glm::vec3 GetFront() const { return front; }
     void SetFront(const glm::vec3& newFront) { 
         front = newFront;
-
-        
     }
     
     glm::vec3 GetUp() const { return up; }

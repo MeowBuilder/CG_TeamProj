@@ -15,7 +15,7 @@ bool Object::Load_Object(const char* path) {
 
 	ifstream in(path);
 	if (!in) {
-		cerr << path << "  ã";
+		cerr << path << " : path error";
 		exit(1);
 	}
 
@@ -70,7 +70,7 @@ bool Object::Set_Obj(GLuint shaderProgramID, const char* path) {
 
 	GLint positionAttribute = glGetAttribLocation(shaderProgramID, "positionAttribute");
 	if (positionAttribute == -1) {
-		cerr << "position Ӽ  ";
+		cerr << "position error";
 		return false;
 	}
 	glVertexAttribPointer(positionAttribute, 3, GL_FLOAT, GL_FALSE, 0, 0);
@@ -112,9 +112,8 @@ void Object::Update(float deltaTime, const std::vector<Object*>& staticObjects) 
 
 	position += velocity * deltaTime;
 
-	// 이동 불가 오브젝트 위에 있는지 확인
 	if (IsOnFloor(staticObjects)) {
-		velocity.y = 0.0f; // 중력 영향 제거
+		velocity.y = 0.0f;
 		isGrounded = true;
 	}
 	else {
@@ -219,10 +218,8 @@ bool Object::IsOnFloor(const std::vector<Object*>& staticObjects) const {
 			glm::vec3 normal;
 			float penetration;
 
-			// 충돌 검사
 			if (CheckCollisionWithBox(other->GetPosition(), other->GetSize(), normal, penetration)) {
-				// y축 기준으로 위에 있는지 확인
-				if (normal.y > 0.9f && position.y > other->GetPosition().y) {
+				if (position.y > other->GetPosition().y) {
 					return true;
 				}
 			}

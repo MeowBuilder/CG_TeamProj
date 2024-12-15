@@ -121,13 +121,12 @@ void Portal::RenderView(GLuint shaderProgramID, const Camera& playerCamera)
     virtualCamera.SetFront(glm::normalize(virtualFront));
     virtualCamera.SetUp(glm::normalize(virtualUp));
 
-    // 뷰 행렬과 투영 행렬 설정
     glm::mat4 view = virtualCamera.GetViewMatrix();
     unsigned int viewLocation = glGetUniformLocation(shaderProgramID, "viewTransform");
     glUniformMatrix4fv(viewLocation, 1, GL_FALSE, &view[0][0]);
 
     float aspectRatio = (float)PORTAL_WIDTH / (float)PORTAL_HEIGHT;
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 50.0f);
     unsigned int projectionLocation = glGetUniformLocation(shaderProgramID, "projectionTransform");
     glUniformMatrix4fv(projectionLocation, 1, GL_FALSE, &projection[0][0]);
 
@@ -154,9 +153,8 @@ void Portal::Render(GLuint shaderProgramID)
 
     glBindVertexArray(VAO);
 
-    // 뒷면 렌더링
     if (linkedPortal) {
-        glDisable(GL_CULL_FACE); // 깊이 테스트 비활성화
+        glDisable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -169,19 +167,18 @@ void Portal::Render(GLuint shaderProgramID)
         GLint portalTextureLocation = glGetUniformLocation(shaderProgramID, "portalTexture");
         glUniform1i(portalTextureLocation, 0);
 
-        glDrawArrays(GL_TRIANGLE_FAN, 0, 4); // 뒷면 렌더링
+        glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-        glEnable(GL_DEPTH_TEST); // 깊이 테스트 활성화
-        glEnable(GL_CULL_FACE); // 다시 활성화
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
     }
 
-    // 앞면 렌더링
     GLint useTextureLocation = glGetUniformLocation(shaderProgramID, "useTexture");
     glUniform1i(useTextureLocation, 0);
 
     unsigned int colorLocation = glGetUniformLocation(shaderProgramID, "colorAttribute");
     glUniform3f(colorLocation, 1.0f, 0.5f, 0.0f);
-    glDrawArrays(GL_LINE_LOOP, 0, 4); // 앞면 렌더링
+    glDrawArrays(GL_LINE_LOOP, 0, 4);
 
     glBindVertexArray(0);
 }
@@ -205,53 +202,38 @@ bool Portal::ShouldTeleport(const glm::vec3& prevPos, const glm::vec3& currentPo
 {
     if (!linkedPortal) return false;
 
-    // 포털의 앞쪽 방향 벡터 계산
     glm::vec3 portalForward = glm::vec3(
         sin(glm::radians(rotation.y)),
         0.0f,
         -cos(glm::radians(rotation.y))
     );
 
-    // 포털의 오른쪽 방향 벡터 계산
     glm::vec3 portalRight = glm::vec3(
         cos(glm::radians(rotation.y)),
         0.0f,
         sin(glm::radians(rotation.y))
     );
 
-    // 이전 위치와 현재 위치에서 포털까지의 거리 계산
     glm::vec3 toPrevPos = prevPos - position;
     glm::vec3 toCurrentPos = currentPos - position;
     
     float prevDist = glm::dot(toPrevPos, portalForward);
     float currentDist = glm::dot(toCurrentPos, portalForward);
 
-    // 포털을 양방향으로 통과했는지 확인
-    bool crossedPortal = (prevDist * currentDist < 0);  // 부호가 바뀌었다면 통과한 것
+    bool crossedPortal = (prevDist * currentDist < 0);
 
     if (crossedPortal) {
-        // 포털 평면에서의 상대 위치 계산
         float rightOffset = glm::dot(toCurrentPos, portalRight);
         float upOffset = toCurrentPos.y;
 
-        // 포털 크기의 절반 + 약간의 여유
         float halfWidth = size.x * 0.55f;
         float halfHeight = size.y * 0.55f;
 
-        // 객체 크기의 절반
         float objHalfWidth = objSize.x * 0.5f;
         float objHalfHeight = objSize.y * 0.5f;
 
-        // 포털 영역 내에 있는지 확인 (여유 있게 체크)
         bool inPortal = (abs(rightOffset) - objHalfWidth < halfWidth &&
                         abs(upOffset) - objHalfHeight < halfHeight);
-
-        if (inPortal) {
-            std::cout << "포털 통과 감지! 거리: " << currentDist 
-                      << ", 좌우 오프셋: " << rightOffset 
-                      << ", 상하 오프셋: " << upOffset << std::endl;
-        }
-
         return inPortal;
     }
 
@@ -264,51 +246,41 @@ void Portal::Teleport(Player& player) const
 {
     if (!linkedPortal) return;
 
-    // 포털 A의 월드 변환 행렬
     glm::mat4 portalTransform = glm::mat4(1.0f);
     portalTransform = glm::translate(portalTransform, position);
     portalTransform = glm::rotate(portalTransform, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // 포털 B의 월드 변환 행렬
     glm::mat4 linkedPortalTransform = glm::mat4(1.0f);
     linkedPortalTransform = glm::translate(linkedPortalTransform, linkedPortal->position);
     linkedPortalTransform = glm::rotate(linkedPortalTransform, glm::radians(linkedPortal->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
 
-    // 새로운 위치 계산
     glm::vec3 newPosition = glm::vec3(linkedPortalTransform * glm::inverse(portalTransform) * glm::vec4(player.GetPosition(), 1.0f));
 
-    // 현재 포털의 방향 벡터
     glm::vec3 portalForward = glm::vec3(
         -sin(glm::radians(rotation.y)),
         0.0f,
         cos(glm::radians(rotation.y))
     );
 
-    // 플레이어의 현재 방향
     glm::vec3 playerFront = player.GetCamera().GetFront();
-    float playerY = playerFront.y;  // Y 성분 보존
+    float playerY = playerFront.y;
 
-    // 포털과 플레이어 방향 사이의 각도 계산
     playerFront.y = 0.0f;
     playerFront = glm::normalize(playerFront);
     float angle = acos(glm::dot(playerFront, portalForward));
     
-    // 각도의 부호 결정 (왼쪽/오른쪽)
     float cross = glm::dot(glm::cross(portalForward, playerFront), glm::vec3(0.0f, 1.0f, 0.0f));
     if (cross < 0) angle = -angle;
 
-    // 새로운 방향 계산 (연결된 포털 기준으로 같은 각도 적용)
     glm::vec3 newFront = glm::vec3(
         -sin(glm::radians(linkedPortal->rotation.y) + angle),
         playerY,
         cos(glm::radians(linkedPortal->rotation.y) + angle)
     );
 
-    // 변환된 값들 적용
     player.SetPosition(newPosition);
     player.GetCamera().SetFront(glm::normalize(newFront));
     
-    // 속도 벡터도 같은 각도로 회전
     glm::vec3 velocity = player.GetVelocity();
     if (glm::length(velocity) > 0.0f) {
         velocity.y = 0.0f;
@@ -325,5 +297,5 @@ void Portal::Teleport(Player& player) const
         player.SetVelocity(velocity);
     }
 
-    std::cout << "텔레포트 완료: (" << newPosition.x << ", " << newPosition.y << ", " << newPosition.z << ")" << std::endl;
+    std::cout << "Teleported : (" << newPosition.x << ", " << newPosition.y << ", " << newPosition.z << ")" << std::endl;
 }

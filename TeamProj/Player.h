@@ -10,7 +10,6 @@ class Player
 {
 private:
     glm::vec3 position;
-    glm::vec3 rotation;
     glm::vec3 velocity;
     glm::vec3 colliderSize;
     GLuint VAO, VBO;
@@ -22,7 +21,6 @@ private:
 public:
     Player(glm::vec3 startPos = glm::vec3(0.0f)) : 
         position(startPos),
-        rotation(0.0f),
         velocity(0.0f),
         colliderSize(glm::vec3(0.8f, 1.6f, 0.8f)),
         isInitialized(false),
@@ -52,9 +50,6 @@ public:
         position = pos;
         camera.SetPosition(pos);
     }
-    
-    glm::vec3 GetRotation() const { return rotation; }
-    void SetRotation(const glm::vec3& rot) { rotation = rot; }
     
     glm::vec3 GetVelocity() const { return velocity; }
     void SetVelocity(const glm::vec3& vel) { velocity = vel; }
